@@ -40,7 +40,7 @@
 #define NTSC_ACTIVE_VIDEO_FIELD_LINE_MID (NTSC_ACTIVE_VIDEO_FIELD_LINE_START + ((NTSC_ACTIVE_VIDEO_FIELD_LINE_END - NTSC_ACTIVE_VIDEO_FIELD_LINE_START) / 2))
 
 // pins
-#define PIN_HSYNC 9
+#define PIN_CSYNC 9 // reserved and used by timer/counter 1 wave generation mode output
 #define PIN_VSYNC 7
 #define PIN_LUMA 4
 
@@ -64,7 +64,7 @@ void setup() {
   sleep_enable();
 
   // initiatize pins for output
-  pinMode(PIN_HSYNC, OUTPUT);
+  pinMode(PIN_CSYNC, OUTPUT);
   pinMode(PIN_VSYNC, OUTPUT);
   pinMode(PIN_LUMA, OUTPUT);
 
@@ -117,8 +117,10 @@ ISR(TIMER1_OVF_vect) {
 
   if (field_line >= NTSC_VSYNC_FIELD_LINE_START && field_line <= NTSC_VSYNC_FIELD_LINE_END) {
     OCR1A = NTSC_VSYNC_PERIOD_TICKS;
+    VSYNC_HIGH;
   } else {
     OCR1A = NTSC_HSYNC_PERIOD_TICKS;
+    VSYNC_LOW;
   }
 
 #ifdef INTERLACED
@@ -166,11 +168,11 @@ ISR(TIMER1_OVF_vect) {
 ISR(TIMER1_COMPB_vect) {
 
   if (is_active_video_line) {
-    interlacing_test();
+    interlacing_test(false);
   }
 }
 
-void interlacing_test() {
+void interlacing_test(bool luma_only_field_1) {
   // this is just for demos sake to test progressive vs interlaced
   // unfortunately a delay is currently the only way to push out data in the field line "luma window"
   // perhaps there is a way to have a "pixel clock" that only can write within this window?
@@ -179,7 +181,6 @@ void interlacing_test() {
   //  - when INTERLACED is defined and luma_only_field_1 is FALSE, the video will NOT flicker because we are drawing luma for BOTH fields per frame
   //  - when INTERLACED is defined and luma_only_field_1 is FALSE, the video will flicker because we are only drawing luma for ONE field per frame
   //  - when INTERLACED is NOT defined, the video will NOT flicker because we are only drawing luma one field but TWICE per frame
-  bool luma_only_field_1 = false;
 
   int box_height = 50;
   int first_line = NTSC_ACTIVE_VIDEO_FIELD_LINE_MID - box_height;
