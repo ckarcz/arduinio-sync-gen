@@ -22,7 +22,7 @@
 #define NTSC_HORIZONTAL_PERIOD_US KHZ_TO_USEC(NTSC_HORIZONTAL_FREQ_KHZ)  // 63.5555625608
 #define NTSC_VERTICAL_FREQ_HZ 59.94
 #define NTSC_HSYNC_PERIOD_US 4.7
-#define NTSC_VSYNC_PERIOD_US 29.1
+#define NTSC_VSYNC_PERIOD_US (NTSC_HORIZONTAL_PERIOD_US - NTSC_HSYNC_PERIOD_US)
 #define NTSC_BACK_PORCH_PERIOD_US 4.7
 #define NTSC_FRAMES_PER_SEC 29.97
 
@@ -116,10 +116,8 @@ void setup() {
 ISR(TIMER1_OVF_vect) {
 
   if (field_line >= NTSC_VSYNC_FIELD_LINE_START && field_line <= NTSC_VSYNC_FIELD_LINE_END) {
-    OCR1A = NTSC_VSYNC_PERIOD_TICKS;
     VSYNC_HIGH;
   } else {
-    OCR1A = NTSC_HSYNC_PERIOD_TICKS;
     VSYNC_LOW;
   }
 
@@ -159,6 +157,12 @@ ISR(TIMER1_OVF_vect) {
   } else {
     field = 1;
     field_line = scan_line;
+  }
+
+  if (field_line >= NTSC_VSYNC_FIELD_LINE_START && field_line <= NTSC_VSYNC_FIELD_LINE_END) {
+    OCR1A = NTSC_VSYNC_PERIOD_TICKS;
+  } else {
+    OCR1A = NTSC_HSYNC_PERIOD_TICKS;
   }
 
   is_active_video_line = field_line >= NTSC_ACTIVE_VIDEO_FIELD_LINE_START && field_line <= NTSC_ACTIVE_VIDEO_FIELD_LINE_END;
