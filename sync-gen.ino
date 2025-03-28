@@ -166,6 +166,7 @@ ISR(TIMER1_OVF_vect) {
   }
 
   is_active_video_line = field_line >= NTSC_ACTIVE_VIDEO_FIELD_LINE_START && field_line <= NTSC_ACTIVE_VIDEO_FIELD_LINE_END;
+  
 }
 
 // timer/counter 1 compare-b interrupt
