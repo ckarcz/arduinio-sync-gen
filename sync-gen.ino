@@ -44,14 +44,16 @@
 #define NTSC_ACTIVE_VIDEO_FIELD_LINE_MID (NTSC_ACTIVE_VIDEO_FIELD_LINE_START + ((NTSC_ACTIVE_VIDEO_FIELD_LINE_END - NTSC_ACTIVE_VIDEO_FIELD_LINE_START) / 2))
 
 // output
-// pins 9 and 10 are used by timer 1. we use pin 9 - output of waveform generation mode.
-// note - each pin is assigned a PORT bit. the bit assignments can vary!
+// pins 9 and 10 are used by timer 1
+// we use pin 9 - output of waveform generation mode.
 #define PIN_CSYNC 9
-
+// vsync - pin 7
 #define PORT_VSYNC PORTD
-#define PIN_VSYNC PD7
+#define PIN_VSYNC PD7 
+// luma - pin 6
 #define PORT_LUMA PORTD
-#define PIN_LUMA PD6
+#define PIN_LUMA PD6 
+ // odd/even - pin 5
 #define PORT_ODD_EVEN PORTD
 #define PIN_ODD_EVEN PD5
 
