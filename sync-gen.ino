@@ -43,14 +43,14 @@
 // pins
 // pins 9 and 10 are used by timer 1. we use pin 9 - output of waveform generation mode.
 #define PIN_CSYNC 9 // hsync or csync. see 'hsync_instead_of_csync' below. active low.
-#define PIN_VSYNC 8 // vsync. active low, inactive high.
-#define PIN_LUMA 7 // for testing.
+#define PIN_VSYNC 7 // vsync. active low, inactive high.
+#define PIN_LUMA 6 // for testing.
 
 // macros
-#define VSYNC_INACTIVE digitalWrite(PIN_VSYNC, HIGH)
-#define VSYNC_ACTIVE digitalWrite(PIN_VSYNC, LOW)
-#define LUMA_HIGH digitalWrite(PIN_LUMA, HIGH)
-#define LUMA_LOW digitalWrite(PIN_LUMA, LOW)
+#define VSYNC_INACTIVE bitWrite(PORTD, PIN_VSYNC, 1)
+#define VSYNC_ACTIVE bitWrite(PORTD, PIN_VSYNC, 0)
+#define LUMA_HIGH bitWrite(PORTD, PIN_LUMA, 1)
+#define LUMA_LOW bitWrite(PORTD, PIN_LUMA, 0)
 
 // settings
 volatile bool hsync_instead_of_csync = false; // this can be set by a digital input pin!
@@ -201,7 +201,7 @@ void interlacing_test(bool luma_only_field_1) {
   int last_line = NTSC_ACTIVE_VIDEO_FIELD_LINE_MID + box_height;
 
   if (field_line >= first_line && field_line <= last_line && field_line % 8 == 0 && (!luma_only_field_1 || field == 1)) {
-    //_delay_us(10);
+    _delay_us(10);
     LUMA_HIGH;
     _delay_us(25);
     LUMA_LOW;
