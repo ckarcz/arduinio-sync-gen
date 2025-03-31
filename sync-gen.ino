@@ -31,7 +31,7 @@
 #define NTSC_HALF_SCAN_LINE_PERIOD_TICKS (NTSC_SCAN_LINE_PERIOD_TICKS / 2)
 #define NTSC_HSYNC_PERIOD_TICKS USEC_TO_TICKS(NTSC_HSYNC_PERIOD_USEC)
 #define NTSC_VSYNC_PERIOD_TICKS USEC_TO_TICKS(NTSC_VSYNC_PERIOD_USEC)
-#define NTSC_ACTIVE_VIDEO_START_TICKS USEC_TO_TICKS(NTSC_BACK_PORCH_PERIOD_USEC)
+#define NTSC_ACTIVE_VIDEO_DELAY_TICKS 0
 #define NTSC_VBLANK_FIELD_LINE_START 1
 #define NTSC_VBLANK_FIELD_LINE_END 21
 #define NTSC_VSYNC_FIELD_LINE_START 1
@@ -106,7 +106,7 @@ void setup() {
 
     ICR1 = NTSC_SCAN_LINE_PERIOD_TICKS;     // timer/counter 1 - overflow interrupt
     OCR1A = NTSC_HSYNC_PERIOD_TICKS;        // timer/counter 1 - compare-a interrupt
-    OCR1B = NTSC_ACTIVE_VIDEO_START_TICKS;  // timer/counter 1 - compare-b interrupt
+    OCR1B = NTSC_ACTIVE_VIDEO_DELAY_TICKS;  // timer/counter 1 - compare-b interrupt
     TCNT1 = 0;                              // timer/counter 1 - value
     TIMSK1 = _BV(TOIE1) | _BV(OCIE1B);      // timer/counter 1 interrupts - enable timer 1 overflow (TOIE1) and compare-b (OCIE1B)
   }
@@ -201,7 +201,7 @@ void interlacing_test(bool luma_only_field_1) {
   int last_line = NTSC_ACTIVE_VIDEO_FIELD_LINE_MID + box_height;
 
   if (field_line >= first_line && field_line <= last_line && field_line % 8 == 0 && (!luma_only_field_1 || field == 1)) {
-    _delay_us(10);
+    _delay_us(20);
     LUMA_HIGH;
     _delay_us(25);
     LUMA_LOW;
