@@ -19,23 +19,26 @@
 #define NTSC_SCAN_LINES_PER_FRAME 525
 #define NTSC_SCAN_LINES_PER_FIELD 263
 #define NTSC_HORIZONTAL_FREQ_KHZ 15.734264
-#define NTSC_HORIZONTAL_PERIOD_US KHZ_TO_USEC(NTSC_HORIZONTAL_FREQ_KHZ)  // 63.5555625608
+#define NTSC_HORIZONTAL_PERIOD_US KHZ_TO_USEC(NTSC_HORIZONTAL_FREQ_KHZ) // 63.5555625608
 #define NTSC_VERTICAL_FREQ_HZ 59.94
 #define NTSC_HSYNC_PERIOD_USEC 4.7
 #define NTSC_VSYNC_PERIOD_USEC ((NTSC_HORIZONTAL_PERIOD_US / 2) - NTSC_HSYNC_PERIOD_USEC)
 #define NTSC_VSYNCEQ_PERIOD_USEC 2.3
 #define NTSC_BACK_PORCH_PERIOD_USEC 4.7
+#define NTSC_FRONT_PORCH_PERIOD_USEC 1.65
+#define NTSC_ACTIVE_VIDEO_PERIOD_USEC (NTSC_HORIZONTAL_PERIOD_US - NTSC_HSYNC_PERIOD_USEC - NTSC_BACK_PORCH_PERIOD_USEC - NTSC_FRONT_PORCH_PERIOD_USEC)
 #define NTSC_FRAMES_PER_SEC 29.97
 
 #define NTSC_SCAN_LINE_PERIOD_TICKS USEC_TO_TICKS(NTSC_HORIZONTAL_PERIOD_US)
 #define NTSC_HALF_SCAN_LINE_PERIOD_TICKS (NTSC_SCAN_LINE_PERIOD_TICKS / 2)
 #define NTSC_HSYNC_PERIOD_TICKS USEC_TO_TICKS(NTSC_HSYNC_PERIOD_USEC)
 #define NTSC_VSYNC_PERIOD_TICKS USEC_TO_TICKS(NTSC_VSYNC_PERIOD_USEC)
-#define NTSC_ACTIVE_VIDEO_DELAY_TICKS 0
 #define NTSC_VBLANK_FIELD_LINE_START 1
 #define NTSC_VBLANK_FIELD_LINE_END 21
 #define NTSC_VSYNC_FIELD_LINE_START 1
 #define NTSC_VSYNC_FIELD_LINE_END 9
+#define NTSC_ACTIVE_VIDEO_DELAY_TICKS 0
+#define NTSC_ACTIVE_VIDEO_PERIOD_TICKS USEC_TO_TICKS(NTSC_ACTIVE_VIDEO_PERIOD_USEC)
 #define NTSC_ACTIVE_VIDEO_FIELD_LINE_START (NTSC_VBLANK_FIELD_LINE_END + 1)
 #define NTSC_ACTIVE_VIDEO_FIELD_LINE_END (NTSC_ACTIVE_VIDEO_FIELD_LINE_START + (NTSC_SCAN_LINES_PER_FIELD - NTSC_VBLANK_FIELD_LINE_END - NTSC_VBLANK_FIELD_LINE_START + 1))
 #define NTSC_ACTIVE_VIDEO_FIELD_LINE_MID (NTSC_ACTIVE_VIDEO_FIELD_LINE_START + ((NTSC_ACTIVE_VIDEO_FIELD_LINE_END - NTSC_ACTIVE_VIDEO_FIELD_LINE_START) / 2))
@@ -44,13 +47,13 @@
 // pins 9 and 10 are used by timer 1. we use pin 9 - output of waveform generation mode.
 #define PIN_CSYNC 9 // hsync or csync. see 'hsync_instead_of_csync' below. active low.
 #define PIN_VSYNC 7 // vsync. active low, inactive high.
-#define PIN_LUMA 6 // for testing.
+#define PIN_LUMA 6  // for testing.
 
 // macros
-#define VSYNC_INACTIVE bitWrite(PORTD, PIN_VSYNC, 1)
-#define VSYNC_ACTIVE bitWrite(PORTD, PIN_VSYNC, 0)
-#define LUMA_HIGH bitWrite(PORTD, PIN_LUMA, 1)
-#define LUMA_LOW bitWrite(PORTD, PIN_LUMA, 0)
+#define VSYNC_INACTIVE PORTD |= _BV(PB7) // bitWrite(PORTD, PIN_VSYNC, 1)
+#define VSYNC_ACTIVE PORTD &= ~_BV(PB7)  // bitWrite(PORTD, PIN_VSYNC, 0)
+#define LUMA_HIGH PORTD |= _BV(PB6)      // bitWrite(PORTD, PIN_LUMA, 1)
+#define LUMA_LOW PORTD &= ~_BV(PB6)      // bitWrite(PORTD, PIN_LUMA, 0)
 
 // settings
 volatile bool hsync_instead_of_csync = false; // this can be set by a digital input pin!
@@ -62,7 +65,8 @@ volatile uint16_t field_line = 1;
 volatile bool is_half_line = false;
 volatile bool is_active_video_line = false;
 
-void setup() {
+void setup()
+{
 
   // is this neccessary?
   set_sleep_mode(SLEEP_MODE_IDLE);
@@ -82,12 +86,12 @@ void setup() {
   {
     // disable timer/counter 0
 
-    TIMSK0 = 0;  // timer/counter 0 - interrupt mask - this prevents jitter!
-    TCCR0A = 0;  // timer/counter 0 - control register a
-    TCCR0B = 0;  // timer/counter 0 - control register a
-    OCR0A = 0;   // timer/counter 0 - compare-a interrupt
-    OCR0B = 0;   // timer/counter 0 - compare-b interrupt
-    TCNT0 = 0;   // timer/counter 0 - value
+    TIMSK0 = 0; // timer/counter 0 - interrupt mask - this prevents jitter!
+    TCCR0A = 0; // timer/counter 0 - control register a
+    TCCR0B = 0; // timer/counter 0 - control register a
+    OCR0A = 0;  // timer/counter 0 - compare-a interrupt
+    OCR0B = 0;  // timer/counter 0 - compare-b interrupt
+    TCNT0 = 0;  // timer/counter 0 - value
   }
   // timer/counter 0 - end
 
@@ -104,11 +108,11 @@ void setup() {
     // - COM1A1 and COM1A0 -> inverting mode
     // CS10 -> no prescaling
 
-    ICR1 = NTSC_SCAN_LINE_PERIOD_TICKS;     // timer/counter 1 - overflow interrupt
-    OCR1A = NTSC_HSYNC_PERIOD_TICKS;        // timer/counter 1 - compare-a interrupt
-    OCR1B = NTSC_ACTIVE_VIDEO_DELAY_TICKS;  // timer/counter 1 - compare-b interrupt
-    TCNT1 = 0;                              // timer/counter 1 - value
-    TIMSK1 = _BV(TOIE1) | _BV(OCIE1B);      // timer/counter 1 interrupts - enable timer 1 overflow (TOIE1) and compare-b (OCIE1B)
+    ICR1 = NTSC_SCAN_LINE_PERIOD_TICKS;    // timer/counter 1 - overflow interrupt
+    OCR1A = NTSC_HSYNC_PERIOD_TICKS;       // timer/counter 1 - compare-a interrupt
+    OCR1B = NTSC_ACTIVE_VIDEO_DELAY_TICKS; // timer/counter 1 - compare-b interrupt
+    TCNT1 = 0;                             // timer/counter 1 - value
+    TIMSK1 = _BV(TOIE1) | _BV(OCIE1B);     // timer/counter 1 interrupts - enable timer 1 overflow (TOIE1) and compare-b (OCIE1B)
   }
   // timer/counter 1 - end
 
@@ -117,28 +121,38 @@ void setup() {
 }
 
 // timer/counter 1 overflow interrupt
-ISR(TIMER1_OVF_vect) {
+ISR(TIMER1_OVF_vect)
+{
 
-  if (field_line >= NTSC_VSYNC_FIELD_LINE_START && field_line <= NTSC_VSYNC_FIELD_LINE_END) {
+  if (field_line >= NTSC_VSYNC_FIELD_LINE_START && field_line <= NTSC_VSYNC_FIELD_LINE_END)
+  {
     VSYNC_ACTIVE;
-  } else {
+  }
+  else
+  {
     VSYNC_INACTIVE;
   }
 
 #ifdef INTERLACED
 
-  if ((scan_line == NTSC_SCAN_LINES_PER_FIELD)) {
+  if ((scan_line == NTSC_SCAN_LINES_PER_FIELD))
+  {
     is_half_line = !is_half_line;
     ICR1 = NTSC_HALF_SCAN_LINE_PERIOD_TICKS;
-  } else if (!hsync_instead_of_csync && (field_line >= NTSC_VSYNC_FIELD_LINE_START && field_line <= NTSC_VSYNC_FIELD_LINE_END)) {
+  }
+  else if (!hsync_instead_of_csync && (field_line >= NTSC_VSYNC_FIELD_LINE_START && field_line <= NTSC_VSYNC_FIELD_LINE_END))
+  {
     is_half_line = !is_half_line;
     ICR1 = NTSC_HALF_SCAN_LINE_PERIOD_TICKS;
-  } else {
+  }
+  else
+  {
     is_half_line = false;
     ICR1 = NTSC_SCAN_LINE_PERIOD_TICKS;
   }
 
-  if (!is_half_line) {
+  if (!is_half_line)
+  {
     scan_line++;
   }
 
@@ -146,47 +160,59 @@ ISR(TIMER1_OVF_vect) {
 
   ICR1 = NTSC_SCAN_LINE_PERIOD_TICKS;
 
-  if (scan_line > NTSC_SCAN_LINES_PER_FIELD) {
+  if (scan_line > NTSC_SCAN_LINES_PER_FIELD)
+  {
     scan_line = 1;
-  } else {
+  }
+  else
+  {
     scan_line++;
   }
 
 #endif
 
-  if (scan_line > NTSC_SCAN_LINES_PER_FRAME) {
+  if (scan_line > NTSC_SCAN_LINES_PER_FRAME)
+  {
     scan_line = 1;
   }
 
-  if (scan_line > NTSC_SCAN_LINES_PER_FIELD) {
+  if (scan_line > NTSC_SCAN_LINES_PER_FIELD)
+  {
     field = 2;
     field_line = scan_line - NTSC_SCAN_LINES_PER_FIELD;
-  } else {
+  }
+  else
+  {
     field = 1;
     field_line = scan_line;
   }
 
-  if (!hsync_instead_of_csync && (field_line >= NTSC_VSYNC_FIELD_LINE_START && field_line <= NTSC_VSYNC_FIELD_LINE_END)) {
+  if (!hsync_instead_of_csync && (field_line >= NTSC_VSYNC_FIELD_LINE_START && field_line <= NTSC_VSYNC_FIELD_LINE_END))
+  {
     OCR1A = NTSC_VSYNC_PERIOD_TICKS;
-  } else {
+  }
+  else
+  {
     OCR1A = NTSC_HSYNC_PERIOD_TICKS;
   }
 
   is_active_video_line = field_line >= NTSC_ACTIVE_VIDEO_FIELD_LINE_START && field_line <= NTSC_ACTIVE_VIDEO_FIELD_LINE_END;
-  
 }
 
 // timer/counter 1 compare-b interrupt
-ISR(TIMER1_COMPB_vect) {
+ISR(TIMER1_COMPB_vect)
+{
 
-  if (is_active_video_line) {
+  if (is_active_video_line)
+  {
+    // how can we do this without delays!?
+    _delay_us(4.7 + 4.7); // (roughly) delay hsync us + bporch us
     interlacing_test(false);
   }
-
 }
 
-void interlacing_test(bool luma_only_field_1) {
-
+void interlacing_test(bool luma_only_field_1)
+{
   // this is just for demos sake to test progressive vs interlaced
   // unfortunately a delay is currently the only way to push out data in the field line "luma window"
   // perhaps there is a way to have a "pixel clock" that only can write within this window?
@@ -200,8 +226,9 @@ void interlacing_test(bool luma_only_field_1) {
   int first_line = NTSC_ACTIVE_VIDEO_FIELD_LINE_MID - box_height;
   int last_line = NTSC_ACTIVE_VIDEO_FIELD_LINE_MID + box_height;
 
-  if (field_line >= first_line && field_line <= last_line && field_line % 8 == 0 && (!luma_only_field_1 || field == 1)) {
-    _delay_us(20);
+  if (field_line >= first_line && field_line <= last_line && field_line % 8 == 0 && (!luma_only_field_1 || field == 1))
+  {
+    _delay_us(10);
     LUMA_HIGH;
     _delay_us(25);
     LUMA_LOW;
@@ -209,7 +236,8 @@ void interlacing_test(bool luma_only_field_1) {
   }
 }
 
-void loop() {
+void loop()
+{
   // is this neccessary?
   sleep_cpu();
 }
