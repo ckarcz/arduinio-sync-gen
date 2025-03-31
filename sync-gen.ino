@@ -132,6 +132,12 @@ void setup()
   sei();
 }
 
+void loop()
+{
+  // is this neccessary?
+  sleep_cpu();
+}
+
 // timer/counter 1 overflow interrupt
 ISR(TIMER1_OVF_vect)
 {
@@ -257,10 +263,4 @@ void interlacing_test(bool luma_only_field_1)
     LUMA_LOW;
     return;
   }
-}
-
-void loop()
-{
-  // is this neccessary?
-  sleep_cpu();
 }
