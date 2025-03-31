@@ -45,7 +45,7 @@
 #define PIN_CSYNC 9 // hsync or csync. see 'hsync_instead_of_csync' below. active low.
 #define PIN_VSYNC 8 // vsync. active low, inactive high.
 #define PIN_ODD_EVEN 7 // odd/even field. high for odd, low for even.
-#define PIN_LUMA 5 // for testing.
+#define PIN_LUMA 6 // for testing.
 
 // macros
 #define VSYNC_INACTIVE digitalWrite(PIN_VSYNC, HIGH)
@@ -192,6 +192,8 @@ ISR(TIMER1_COMPB_vect) {
 
   if (is_active_video_line) {
     interlacing_test(false);
+  } else {
+    LUMA_LOW;
   }
 
 }
