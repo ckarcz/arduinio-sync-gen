@@ -41,10 +41,11 @@
 #define NTSC_ACTIVE_VIDEO_FIELD_LINE_MID (NTSC_ACTIVE_VIDEO_FIELD_LINE_START + ((NTSC_ACTIVE_VIDEO_FIELD_LINE_END - NTSC_ACTIVE_VIDEO_FIELD_LINE_START) / 2))
 
 // pins
-#define PIN_CSYNC 9 // pins 9 and 10 are used by timer 1. we use pin 9 - output of waveform generation mode.
-#define PIN_VSYNC 7
-#define PIN_ODD_EVEN 8
-#define PIN_LUMA 5
+// pins 9 and 10 are used by timer 1. we use pin 9 - output of waveform generation mode.
+#define PIN_CSYNC 9 // hsync or csync. see 'hsync_instead_of_csync' below. active low.
+#define PIN_VSYNC 7 // vsync. active low.
+#define PIN_ODD_EVEN 8 // odd/even field. high for odd
+#define PIN_LUMA 5 // for testing. active high.
 
 // macros
 #define VSYNC_HIGH digitalWrite(PIN_VSYNC, HIGH)
@@ -55,9 +56,9 @@
 #define LUMA_LOW digitalWrite(PIN_LUMA, LOW)
 
 // settings
-bool hsync_instead_of_csync = false;
+volatile bool hsync_instead_of_csync = false; // this can be set by a digital input pin!
 
-// state
+// sync gen state
 volatile uint16_t scan_line = 1;
 volatile uint16_t field = 1;
 volatile uint16_t field_line = 1;
