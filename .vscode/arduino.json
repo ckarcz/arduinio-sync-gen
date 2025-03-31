@@ -1,0 +1,9 @@
+{
+    "port": "/dev/tty.usbserial-B003UHHC",
+    "configuration": "cpu=atmega328",
+    "board": "arduino:avr:nano",
+    "sketch": "sync-gen.ino",
+    "intelliSenseGen": "disable",
+    "output": "build",
+    "prebuild": "rm -rf ./build/"
+}
