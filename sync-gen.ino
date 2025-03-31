@@ -193,6 +193,7 @@ ISR(TIMER1_COMPB_vect) {
   if (is_active_video_line) {
     interlacing_test(false);
   }
+  
 }
 
 void interlacing_test(bool luma_only_field_1) {
