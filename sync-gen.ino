@@ -124,9 +124,9 @@ void setup() {
 ISR(TIMER1_OVF_vect) {
 
   if (field_line >= NTSC_VSYNC_FIELD_LINE_START && field_line <= NTSC_VSYNC_FIELD_LINE_END) {
-    VSYNC_HIGH;
-  } else {
     VSYNC_LOW;
+  } else {
+    VSYNC_HIGH;
   }
 
   if (field == 1) {
