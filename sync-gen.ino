@@ -47,12 +47,12 @@
 #define PIN_LUMA 5
 
 // macros
-#define VSYNC_HIGH bitWrite(PORTD, PIN_VSYNC, 1)
-#define VSYNC_LOW bitWrite(PORTD, PIN_VSYNC, 0)
-#define ODD_FIELD bitWrite(PORTD, PIN_ODD_EVEN, 1)
-#define EVEN_FIELD bitWrite(PORTD, PIN_ODD_EVEN, 0)
-#define LUMA_HIGH bitWrite(PORTD, PIN_LUMA, 1)
-#define LUMA_LOW bitWrite(PORTD, PIN_LUMA, 0)
+#define VSYNC_HIGH digitalWrite(PIN_VSYNC, HIGH)
+#define VSYNC_LOW digitalWrite(PIN_VSYNC, LOW)
+#define ODD_FIELD digitalWrite(PIN_ODD_EVEN, HIGH)
+#define EVEN_FIELD digitalWrite(PIN_ODD_EVEN, LOW)
+#define LUMA_HIGH digitalWrite(PIN_LUMA, HIGH)
+#define LUMA_LOW digitalWrite(PIN_LUMA, LOW)
 
 // settings
 bool hsync_instead_of_csync = false;
