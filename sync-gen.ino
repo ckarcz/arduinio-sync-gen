@@ -43,8 +43,8 @@
 // pins
 // pins 9 and 10 are used by timer 1. we use pin 9 - output of waveform generation mode.
 #define PIN_CSYNC 9 // hsync or csync. see 'hsync_instead_of_csync' below. active low.
-#define PIN_VSYNC 7 // vsync. active low, inactive high.
-#define PIN_ODD_EVEN 8 // odd/even field. high for odd, low for even.
+#define PIN_VSYNC 8 // vsync. active low, inactive high.
+#define PIN_ODD_EVEN 7 // odd/even field. high for odd, low for even.
 #define PIN_LUMA 5 // for testing.
 
 // macros
@@ -193,7 +193,7 @@ ISR(TIMER1_COMPB_vect) {
   if (is_active_video_line) {
     interlacing_test(false);
   }
-  
+
 }
 
 void interlacing_test(bool luma_only_field_1) {
