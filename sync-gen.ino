@@ -41,15 +41,21 @@
 #define NTSC_ACTIVE_VIDEO_FIELD_LINE_MID (NTSC_ACTIVE_VIDEO_FIELD_LINE_START + ((NTSC_ACTIVE_VIDEO_FIELD_LINE_END - NTSC_ACTIVE_VIDEO_FIELD_LINE_START) / 2))
 
 // pins
-#define PIN_CSYNC 9 // reserved and used by timer/counter 1 wave generation mode output
+#define PIN_CSYNC 9 // pins 9 and 10 are used by timer 1. we use pin 9 - output of waveform generation mode.
 #define PIN_VSYNC 7
-#define PIN_LUMA 4
+#define PIN_ODD_EVEN 8
+#define PIN_LUMA 5
 
 // macros
 #define VSYNC_HIGH bitWrite(PORTD, PIN_VSYNC, 1)
 #define VSYNC_LOW bitWrite(PORTD, PIN_VSYNC, 0)
+#define ODD_FIELD bitWrite(PORTD, PIN_ODD_EVEN, 1)
+#define EVEN_FIELD bitWrite(PORTD, PIN_ODD_EVEN, 0)
 #define LUMA_HIGH bitWrite(PORTD, PIN_LUMA, 1)
 #define LUMA_LOW bitWrite(PORTD, PIN_LUMA, 0)
+
+// settings
+bool hsync_instead_of_csync = false;
 
 // state
 volatile uint16_t scan_line = 1;
@@ -67,6 +73,7 @@ void setup() {
   // initiatize pins for output
   pinMode(PIN_CSYNC, OUTPUT);
   pinMode(PIN_VSYNC, OUTPUT);
+  pinMode(PIN_ODD_EVEN, OUTPUT);
   pinMode(PIN_LUMA, OUTPUT);
 
   // timers:
@@ -77,11 +84,10 @@ void setup() {
   // timer/counter 0 - start
   {
     // disable timer/counter 0
-    // this prevents jitter
 
-    TIMSK0 = 0;  // timer/counter 0 - interrupt mask
-    TCCR0A = 0;  // timer/counter 0 control register a
-    TCCR0B = 0;  // timer/counter 0 control register a
+    TIMSK0 = 0;  // timer/counter 0 - interrupt mask - this prevents jitter!
+    TCCR0A = 0;  // timer/counter 0 - control register a
+    TCCR0B = 0;  // timer/counter 0 - control register a
     OCR0A = 0;   // timer/counter 0 - compare-a interrupt
     OCR0B = 0;   // timer/counter 0 - compare-b interrupt
     TCNT0 = 0;   // timer/counter 0 - value
@@ -122,9 +128,19 @@ ISR(TIMER1_OVF_vect) {
     VSYNC_LOW;
   }
 
+  if (field == 1) {
+    ODD_FIELD;
+  } else {
+    EVEN_FIELD;
+  }
+
 #ifdef INTERLACED
 
-  if ((scan_line == NTSC_SCAN_LINES_PER_FIELD) || (field_line >= NTSC_VSYNC_FIELD_LINE_START && field_line <= NTSC_VSYNC_FIELD_LINE_END)) {
+  if ((scan_line == NTSC_SCAN_LINES_PER_FIELD)) {
+    is_half_line = !is_half_line;
+    ICR1 = NTSC_HALF_SCAN_LINE_PERIOD_TICKS;
+  } 
+  else if (!hsync_instead_of_csync && (field_line >= NTSC_VSYNC_FIELD_LINE_START && field_line <= NTSC_VSYNC_FIELD_LINE_END)) {
     is_half_line = !is_half_line;
     ICR1 = NTSC_HALF_SCAN_LINE_PERIOD_TICKS;
   } else {
@@ -160,7 +176,7 @@ ISR(TIMER1_OVF_vect) {
     field_line = scan_line;
   }
 
-  if (field_line >= NTSC_VSYNC_FIELD_LINE_START && field_line <= NTSC_VSYNC_FIELD_LINE_END) {
+  if (!hsync_instead_of_csync && (field_line >= NTSC_VSYNC_FIELD_LINE_START && field_line <= NTSC_VSYNC_FIELD_LINE_END)) {
     OCR1A = NTSC_VSYNC_PERIOD_TICKS;
   } else {
     OCR1A = NTSC_HSYNC_PERIOD_TICKS;
