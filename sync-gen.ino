@@ -48,12 +48,15 @@
 #define PIN_CSYNC 9 // hsync or csync. see 'hsync_instead_of_csync' below. active low.
 #define PIN_VSYNC 7 // vsync. active low, inactive high.
 #define PIN_LUMA 6  // for testing.
+#define PIN_ODD_EVEN 5 // for testing.
 
 // macros
 #define VSYNC_INACTIVE PORTD |= _BV(PB7) // bitWrite(PORTD, PIN_VSYNC, 1)
 #define VSYNC_ACTIVE PORTD &= ~_BV(PB7)  // bitWrite(PORTD, PIN_VSYNC, 0)
 #define LUMA_HIGH PORTD |= _BV(PB6)      // bitWrite(PORTD, PIN_LUMA, 1)
 #define LUMA_LOW PORTD &= ~_BV(PB6)      // bitWrite(PORTD, PIN_LUMA, 0)
+#define ODD_FIELD PORTD |= _BV(PB5)      // bitWrite(PORTD, PIN_ODD_EVEN, 1)
+#define EVEN_FIELD PORTD &= ~_BV(PB5)      // bitWrite(PORTD, PIN_ODD_EVEN, 0)
 
 // settings
 volatile bool hsync_instead_of_csync = false; // this can be set by a digital input pin!
@@ -131,6 +134,15 @@ ISR(TIMER1_OVF_vect)
   else
   {
     VSYNC_INACTIVE;
+  }
+
+  if (field == 1)
+  {
+    ODD_FIELD;
+  }
+  else
+  {
+    EVEN_FIELD;
   }
 
 #ifdef INTERLACED
