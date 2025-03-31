@@ -44,7 +44,7 @@
 // pins 9 and 10 are used by timer 1. we use pin 9 - output of waveform generation mode.
 #define PIN_CSYNC 9 // hsync or csync. see 'hsync_instead_of_csync' below. active low.
 #define PIN_VSYNC 7 // vsync. active low.
-#define PIN_ODD_EVEN 8 // odd/even field. high for odd
+#define PIN_ODD_EVEN 8 // odd/even field. high for odd, low for even.
 #define PIN_LUMA 5 // for testing. active high.
 
 // macros
