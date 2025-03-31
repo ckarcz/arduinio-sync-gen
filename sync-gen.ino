@@ -43,20 +43,26 @@
 #define NTSC_ACTIVE_VIDEO_FIELD_LINE_END (NTSC_ACTIVE_VIDEO_FIELD_LINE_START + (NTSC_SCAN_LINES_PER_FIELD - NTSC_VBLANK_FIELD_LINE_END - NTSC_VBLANK_FIELD_LINE_START + 1))
 #define NTSC_ACTIVE_VIDEO_FIELD_LINE_MID (NTSC_ACTIVE_VIDEO_FIELD_LINE_START + ((NTSC_ACTIVE_VIDEO_FIELD_LINE_END - NTSC_ACTIVE_VIDEO_FIELD_LINE_START) / 2))
 
-// pins
+// output
 // pins 9 and 10 are used by timer 1. we use pin 9 - output of waveform generation mode.
-#define PIN_CSYNC 9 // hsync or csync. see 'hsync_instead_of_csync' below. active low.
-#define PIN_VSYNC 7 // vsync. active low, inactive high.
-#define PIN_LUMA 6  // for testing.
-#define PIN_ODD_EVEN 5 // for testing.
+// note - each pin is assigned a PORT bit. the bit assignments can vary!
+#define PIN_CSYNC 9
+
+#define PORT_VSYNC PORTD
+#define PIN_VSYNC PD7
+#define PORT_LUMA PORTD
+#define PIN_LUMA PD6
+#define PORT_ODD_EVEN PORTD
+#define PIN_ODD_EVEN PD5
 
 // macros
-#define VSYNC_INACTIVE PORTD |= _BV(PB7) // bitWrite(PORTD, PIN_VSYNC, 1)
-#define VSYNC_ACTIVE PORTD &= ~_BV(PB7)  // bitWrite(PORTD, PIN_VSYNC, 0)
-#define LUMA_HIGH PORTD |= _BV(PB6)      // bitWrite(PORTD, PIN_LUMA, 1)
-#define LUMA_LOW PORTD &= ~_BV(PB6)      // bitWrite(PORTD, PIN_LUMA, 0)
-#define ODD_FIELD PORTD |= _BV(PB5)      // bitWrite(PORTD, PIN_ODD_EVEN, 1)
-#define EVEN_FIELD PORTD &= ~_BV(PB5)      // bitWrite(PORTD, PIN_ODD_EVEN, 0)
+// we write directly to the PORTs as it's the fastest instruction possible
+#define VSYNC_INACTIVE PORT_VSYNC |= _BV(PIN_VSYNC) // bitWrite(PORTD, PIN_VSYNC, 1)
+#define VSYNC_ACTIVE PORT_VSYNC &= ~_BV(PIN_VSYNC)  // bitWrite(PORTD, PIN_VSYNC, 0)
+#define LUMA_HIGH PORT_LUMA |= _BV(PIN_LUMA)      // bitWrite(PORTD, PIN_LUMA, 1)
+#define LUMA_LOW PORT_LUMA &= ~_BV(PIN_LUMA)      // bitWrite(PORTD, PIN_LUMA, 0)
+#define ODD_FIELD PORT_ODD_EVEN |= _BV(PIN_ODD_EVEN)      // bitWrite(PORTD, PIN_ODD_EVEN, 1)
+#define EVEN_FIELD PORT_ODD_EVEN &= ~_BV(PIN_ODD_EVEN)      // bitWrite(PORTD, PIN_ODD_EVEN, 0)
 
 // settings
 volatile bool hsync_instead_of_csync = false; // this can be set by a digital input pin!
@@ -221,6 +227,7 @@ ISR(TIMER1_COMPB_vect)
     _delay_us(4.7 + 4.7); // (roughly) delay hsync us + bporch us
     interlacing_test(false);
   }
+
 }
 
 void interlacing_test(bool luma_only_field_1)
