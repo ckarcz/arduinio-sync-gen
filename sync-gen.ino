@@ -49,22 +49,23 @@
 #define PIN_CSYNC 9
 // vsync - pin 7
 #define PORT_VSYNC PORTD
-#define PIN_VSYNC PD7 
+#define PIN_VSYNC PD7
 // luma - pin 6
 #define PORT_LUMA PORTD
-#define PIN_LUMA PD6 
- // odd/even - pin 5
+#define PIN_LUMA PD6
+// odd/even - pin 5
 #define PORT_ODD_EVEN PORTD
 #define PIN_ODD_EVEN PD5
 
 // macros
 // we write directly to the PORTs as it's the fastest instruction possible
-#define VSYNC_INACTIVE PORT_VSYNC |= _BV(PIN_VSYNC) // bitWrite(PORTD, PIN_VSYNC, 1)
-#define VSYNC_ACTIVE PORT_VSYNC &= ~_BV(PIN_VSYNC)  // bitWrite(PORTD, PIN_VSYNC, 0)
-#define LUMA_HIGH PORT_LUMA |= _BV(PIN_LUMA)      // bitWrite(PORTD, PIN_LUMA, 1)
-#define LUMA_LOW PORT_LUMA &= ~_BV(PIN_LUMA)      // bitWrite(PORTD, PIN_LUMA, 0)
-#define ODD_FIELD PORT_ODD_EVEN |= _BV(PIN_ODD_EVEN)      // bitWrite(PORTD, PIN_ODD_EVEN, 1)
-#define EVEN_FIELD PORT_ODD_EVEN &= ~_BV(PIN_ODD_EVEN)      // bitWrite(PORTD, PIN_ODD_EVEN, 0)
+// using bitWrite and ESPECIALLY digitalWrite is slower
+#define VSYNC_INACTIVE PORT_VSYNC |= _BV(PIN_VSYNC)    // bitWrite(PORTD, PIN_VSYNC, 1)
+#define VSYNC_ACTIVE PORT_VSYNC &= ~_BV(PIN_VSYNC)     // bitWrite(PORTD, PIN_VSYNC, 0)
+#define LUMA_HIGH PORT_LUMA |= _BV(PIN_LUMA)           // bitWrite(PORTD, PIN_LUMA, 1)
+#define LUMA_LOW PORT_LUMA &= ~_BV(PIN_LUMA)           // bitWrite(PORTD, PIN_LUMA, 0)
+#define ODD_FIELD PORT_ODD_EVEN |= _BV(PIN_ODD_EVEN)   // bitWrite(PORTD, PIN_ODD_EVEN, 1)
+#define EVEN_FIELD PORT_ODD_EVEN &= ~_BV(PIN_ODD_EVEN) // bitWrite(PORTD, PIN_ODD_EVEN, 0)
 
 // settings
 volatile bool hsync_instead_of_csync = false; // this can be set by a digital input pin!
@@ -225,18 +226,19 @@ ISR(TIMER1_COMPB_vect)
 
   if (is_active_video_line)
   {
-    // how can we do this without delays!?
+    // is there a way to do this WITHOUT delays!?
     _delay_us(4.7 + 4.7); // (roughly) delay hsync us + bporch us
+
+    // test
     interlacing_test(false);
   }
-
 }
 
 void interlacing_test(bool luma_only_field_1)
 {
   // this is just for demos sake to test progressive vs interlaced
-  // unfortunately a delay is currently the only way to push out data in the field line "luma window"
-  // perhaps there is a way to have a "pixel clock" that only can write within this window?
+
+  // is there a way to do this WITHOUT delays!?
 
   // interlacing test:
   //  - when INTERLACED is defined and luma_only_field_1 is FALSE, the video will NOT flicker because we are drawing luma for BOTH fields per frame
