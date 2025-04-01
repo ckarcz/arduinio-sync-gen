@@ -241,8 +241,11 @@ ISR(TIMER1_COMPB_vect)
     // is there a way to do this WITHOUT delays!?
     _delay_us(4.7 + 4.7); // (roughly) delay hsync us + bporch us
 
-    // test
-    interlacing_test(false);
+    // pass interlacing_test(value): false to not pick out fields
+    // pass interlacing_test(value): 1 for field-1 -or- 2 for field-2
+    // depending on the value of the interlacing bool variable, you will see flickering and thinner or thicker lines
+    interlacing = true;
+    interlacing_test(1);
   }
 }
 
