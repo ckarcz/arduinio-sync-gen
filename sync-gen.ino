@@ -3,9 +3,6 @@
 #include <avr/sleep.h>
 #include <limits.h>
 
-// comment out below for fake-progressive scanning
-#define INTERLACED
-
 // constants
 #define CPU_TICKS_PER_US (F_CPU / 1000000)
 #define USEC_PER_KHZ 1000
@@ -68,7 +65,7 @@
 #define EVEN_FIELD PORT_ODD_EVEN &= ~_BV(PIN_ODD_EVEN) // bitWrite(PORTD, PIN_ODD_EVEN, 0)
 
 // settings
-volatile bool hsync_instead_of_csync = false; // this can be set by a digital input pin!
+volatile bool interlacing = true;
 
 // sync gen state
 volatile uint16_t scan_line = 1;
@@ -76,6 +73,7 @@ volatile uint16_t field = 1;
 volatile uint16_t field_line = 1;
 volatile bool is_half_line = false;
 volatile bool is_active_video_line = false;
+volatile bool is_odd_field = true;
 
 void setup()
 {
@@ -141,62 +139,61 @@ void loop()
 // timer/counter 1 overflow interrupt
 ISR(TIMER1_OVF_vect)
 {
-
-  if (field_line >= NTSC_VSYNC_FIELD_LINE_START && field_line <= NTSC_VSYNC_FIELD_LINE_END)
+  if (interlacing)
   {
-    VSYNC_ACTIVE;
+    if (scan_line == NTSC_SCAN_LINES_PER_FIELD)
+    {
+      ICR1 = NTSC_HALF_SCAN_LINE_PERIOD_TICKS;
+    }
+    else
+    {
+      ICR1 = NTSC_SCAN_LINE_PERIOD_TICKS;
+    }
+
+    OCR1A = NTSC_HSYNC_PERIOD_TICKS;
+
+    if (scan_line != NTSC_SCAN_LINES_PER_FIELD)
+    {
+      scan_line++;
+
+      if (scan_line == NTSC_SCAN_LINES_PER_FRAME)
+      {
+        OCR1A = NTSC_VSYNC_PERIOD_TICKS;
+
+        is_odd_field = !is_odd_field;
+      }
+    }
+    else
+    {
+      if (is_half_line)
+      {
+        scan_line++;
+      }
+      else
+      {
+        OCR1A = NTSC_VSYNC_PERIOD_TICKS;
+      }
+
+      is_half_line = !is_half_line;
+    }
   }
   else
   {
-    VSYNC_INACTIVE;
-  }
-
-  if (field == 1)
-  {
-    ODD_FIELD;
-  }
-  else
-  {
-    EVEN_FIELD;
-  }
-
-#ifdef INTERLACED
-
-  if ((scan_line == NTSC_SCAN_LINES_PER_FIELD))
-  {
-    is_half_line = !is_half_line;
-    ICR1 = NTSC_HALF_SCAN_LINE_PERIOD_TICKS;
-  }
-  else if (!hsync_instead_of_csync && (field_line >= NTSC_VSYNC_FIELD_LINE_START && field_line <= NTSC_VSYNC_FIELD_LINE_END))
-  {
-    is_half_line = !is_half_line;
-    ICR1 = NTSC_HALF_SCAN_LINE_PERIOD_TICKS;
-  }
-  else
-  {
-    is_half_line = false;
     ICR1 = NTSC_SCAN_LINE_PERIOD_TICKS;
+    OCR1A = NTSC_HSYNC_PERIOD_TICKS;
+
+    if (scan_line == NTSC_SCAN_LINES_PER_FIELD)
+    {
+      OCR1A = NTSC_VSYNC_PERIOD_TICKS;
+
+      scan_line = 1;
+      is_odd_field = !is_odd_field;
+    }
+    else
+    {
+      scan_line++;
+    }
   }
-
-  if (!is_half_line)
-  {
-    scan_line++;
-  }
-
-#else
-
-  ICR1 = NTSC_SCAN_LINE_PERIOD_TICKS;
-
-  if (scan_line > NTSC_SCAN_LINES_PER_FIELD)
-  {
-    scan_line = 1;
-  }
-  else
-  {
-    scan_line++;
-  }
-
-#endif
 
   if (scan_line > NTSC_SCAN_LINES_PER_FRAME)
   {
@@ -214,16 +211,25 @@ ISR(TIMER1_OVF_vect)
     field_line = scan_line;
   }
 
-  if (!hsync_instead_of_csync && (field_line >= NTSC_VSYNC_FIELD_LINE_START && field_line <= NTSC_VSYNC_FIELD_LINE_END))
+  is_active_video_line = field_line >= NTSC_ACTIVE_VIDEO_FIELD_LINE_START && field_line <= NTSC_ACTIVE_VIDEO_FIELD_LINE_END;
+
+  if (field_line == NTSC_VSYNC_FIELD_LINE_START)
   {
-    OCR1A = NTSC_VSYNC_PERIOD_TICKS;
+    VSYNC_ACTIVE;
+  }
+  else if (field_line <= NTSC_VSYNC_FIELD_LINE_END)
+  {
+    VSYNC_INACTIVE;
+  }
+
+  if (is_odd_field)
+  {
+    ODD_FIELD;
   }
   else
   {
-    OCR1A = NTSC_HSYNC_PERIOD_TICKS;
+    EVEN_FIELD;
   }
-
-  is_active_video_line = field_line >= NTSC_ACTIVE_VIDEO_FIELD_LINE_START && field_line <= NTSC_ACTIVE_VIDEO_FIELD_LINE_END;
 }
 
 // timer/counter 1 compare-b interrupt
@@ -240,22 +246,28 @@ ISR(TIMER1_COMPB_vect)
   }
 }
 
-void interlacing_test(bool luma_only_field_1)
+void interlacing_test(uint16_t field_for_luma)
 {
   // this is just for demos sake to test progressive vs interlaced
 
   // is there a way to do this WITHOUT delays!?
 
   // interlacing test:
-  //  - when INTERLACED is defined and luma_only_field_1 is FALSE, the video will NOT flicker because we are drawing luma for BOTH fields per frame
-  //  - when INTERLACED is defined and luma_only_field_1 is FALSE, the video will flicker because we are only drawing luma for ONE field per frame
-  //  - when INTERLACED is NOT defined, the video will NOT flicker because we are only drawing luma one field but TWICE per frame
+  //  - when interlacing is true and field_for_luma is 0/false:
+  //    - the video will NOT flicker because we are drawing luma for BOTH fields per frame
+  //    - the bars will be thicker becuase we are drawing BOTH fields
+  //  - when interlacing is true and field_for_luma is 1 or 2:
+  //    - the video will flicker because we are only drawing luma during field 1 or field 2
+  //    - the bars will be thiner becuase we are only drawing half the fields
+  //  - when interlacing is false and field_for_luma is 1:
+  //    - the video will NOT flicker because we are drawing field 1 but twice per frame
+  //    - the bars will be thicker becuase we are drawing field 1 but twice per frame
 
   int box_height = 50;
   int first_line = NTSC_ACTIVE_VIDEO_FIELD_LINE_MID - box_height;
   int last_line = NTSC_ACTIVE_VIDEO_FIELD_LINE_MID + box_height;
 
-  if (field_line >= first_line && field_line <= last_line && field_line % 8 == 0 && (!luma_only_field_1 || field == 1))
+  if (field_line >= first_line && field_line <= last_line && field_line % 8 == 0 && (!field_for_luma || field == field_for_luma))
   {
     _delay_us(10);
     LUMA_HIGH;
