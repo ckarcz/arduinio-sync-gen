@@ -23,7 +23,7 @@
 #define NTSC_VSYNCEQ_PERIOD_USEC 2.3
 #define NTSC_BACK_PORCH_PERIOD_USEC 4.7
 #define NTSC_FRONT_PORCH_PERIOD_USEC 1.65
-#define NTSC_ACTIVE_VIDEO_PERIOD_USEC (NTSC_HORIZONTAL_PERIOD_US - NTSC_HSYNC_PERIOD_USEC - NTSC_BACK_PORCH_PERIOD_USEC - NTSC_FRONT_PORCH_PERIOD_USEC)
+#define NTSC_ACTIVE_VIDEO_PERIOD_USEC (NTSC_HORIZONTAL_PERIOD_US / 2)
 #define NTSC_FRAMES_PER_SEC 29.97
 
 #define NTSC_SCAN_LINE_PERIOD_TICKS USEC_TO_TICKS(NTSC_HORIZONTAL_PERIOD_US)
@@ -34,7 +34,7 @@
 #define NTSC_VBLANK_FIELD_LINE_END 21
 #define NTSC_VSYNC_FIELD_LINE_START 1
 #define NTSC_VSYNC_FIELD_LINE_END 9
-#define NTSC_ACTIVE_VIDEO_DELAY_TICKS 0
+#define NTSC_ACTIVE_VIDEO_DELAY_TICKS NTSC_HSYNC_PERIOD_TICKS
 #define NTSC_ACTIVE_VIDEO_PERIOD_TICKS USEC_TO_TICKS(NTSC_ACTIVE_VIDEO_PERIOD_USEC)
 #define NTSC_ACTIVE_VIDEO_FIELD_LINE_START (NTSC_VBLANK_FIELD_LINE_END + 1)
 #define NTSC_ACTIVE_VIDEO_FIELD_LINE_END (NTSC_ACTIVE_VIDEO_FIELD_LINE_START + (NTSC_SCAN_LINES_PER_FIELD - NTSC_VBLANK_FIELD_LINE_END - NTSC_VBLANK_FIELD_LINE_START + 1))
@@ -50,19 +50,14 @@
 // luma - pin 6
 #define PORT_LUMA PORTD
 #define PIN_LUMA PD6
-// odd/even - pin 5
-#define PORT_ODD_EVEN PORTD
-#define PIN_ODD_EVEN PD5
 
 // macros
 // we write directly to the PORTs as it's the fastest instruction possible
 // using bitWrite and ESPECIALLY digitalWrite is slower
-#define VSYNC_INACTIVE PORT_VSYNC |= _BV(PIN_VSYNC)    // bitWrite(PORTD, PIN_VSYNC, 1)
-#define VSYNC_ACTIVE PORT_VSYNC &= ~_BV(PIN_VSYNC)     // bitWrite(PORTD, PIN_VSYNC, 0)
-#define LUMA_HIGH PORT_LUMA |= _BV(PIN_LUMA)           // bitWrite(PORTD, PIN_LUMA, 1)
-#define LUMA_LOW PORT_LUMA &= ~_BV(PIN_LUMA)           // bitWrite(PORTD, PIN_LUMA, 0)
-#define ODD_FIELD PORT_ODD_EVEN |= _BV(PIN_ODD_EVEN)   // bitWrite(PORTD, PIN_ODD_EVEN, 1)
-#define EVEN_FIELD PORT_ODD_EVEN &= ~_BV(PIN_ODD_EVEN) // bitWrite(PORTD, PIN_ODD_EVEN, 0)
+#define VSYNC_INACTIVE PORT_VSYNC |= _BV(PIN_VSYNC) // bitWrite(PORTD, PIN_VSYNC, 1)
+#define VSYNC_ACTIVE PORT_VSYNC &= ~_BV(PIN_VSYNC)  // bitWrite(PORTD, PIN_VSYNC, 0)
+#define LUMA_HIGH PORT_LUMA |= _BV(PIN_LUMA)        // bitWrite(PORTD, PIN_LUMA, 1)
+#define LUMA_LOW PORT_LUMA &= ~_BV(PIN_LUMA)        // bitWrite(PORTD, PIN_LUMA, 0)
 
 // settings
 volatile bool interlacing = true;
@@ -71,13 +66,11 @@ volatile bool interlacing = true;
 volatile uint16_t scan_line = 1;
 volatile uint16_t field = 1;
 volatile uint16_t field_line = 1;
-volatile bool is_half_line = false;
+volatile uint16_t half_line = 0;
 volatile bool is_active_video_line = false;
-volatile bool is_odd_field = true;
 
 void setup()
 {
-
   // is this neccessary?
   set_sleep_mode(SLEEP_MODE_IDLE);
   sleep_enable();
@@ -118,11 +111,11 @@ void setup()
     // - COM1A1 and COM1A0 -> inverting mode
     // CS10 -> no prescaling
 
-    ICR1 = NTSC_SCAN_LINE_PERIOD_TICKS;    // timer/counter 1 - overflow interrupt
-    OCR1A = NTSC_HSYNC_PERIOD_TICKS;       // timer/counter 1 - compare-a interrupt
-    OCR1B = NTSC_ACTIVE_VIDEO_DELAY_TICKS; // timer/counter 1 - compare-b interrupt
-    TCNT1 = 0;                             // timer/counter 1 - value
-    TIMSK1 = _BV(TOIE1) | _BV(OCIE1B);     // timer/counter 1 interrupts - enable timer 1 overflow (TOIE1) and compare-b (OCIE1B)
+    ICR1 = NTSC_SCAN_LINE_PERIOD_TICKS;              // timer/counter 1 - overflow interrupt
+    OCR1A = NTSC_HSYNC_PERIOD_TICKS;                 // timer/counter 1 - compare-a interrupt
+    OCR1B = NTSC_ACTIVE_VIDEO_PERIOD_TICKS;          // timer/counter 1 - compare-b interrupt
+    TCNT1 = 0;                                       // timer/counter 1 - value
+    TIMSK1 = _BV(TOIE1) | _BV(OCIE1A) | _BV(OCIE1B); // timer/counter 1 interrupts - enable timer 1 overflow (TOIE1) and compare-b (OCIE1B)
   }
   // timer/counter 1 - end
 
@@ -161,12 +154,11 @@ ISR(TIMER1_OVF_vect)
         OCR1A = NTSC_VSYNC_PERIOD_TICKS;
 
         scan_line = 1;
-        is_odd_field = !is_odd_field;
       }
     }
     else
     {
-      if (is_half_line)
+      if (half_line == 1)
       {
         scan_line++;
       }
@@ -174,8 +166,8 @@ ISR(TIMER1_OVF_vect)
       {
         OCR1A = NTSC_VSYNC_PERIOD_TICKS;
       }
-
-      is_half_line = !is_half_line;
+      
+      half_line ^= 1;
     }
   }
   else
@@ -188,7 +180,6 @@ ISR(TIMER1_OVF_vect)
       OCR1A = NTSC_VSYNC_PERIOD_TICKS;
 
       scan_line = 1;
-      is_odd_field = !is_odd_field;
     }
     else
     {
@@ -196,7 +187,7 @@ ISR(TIMER1_OVF_vect)
     }
   }
 
-  if (scan_line > NTSC_SCAN_LINES_PER_FRAME)
+  if (scan_line >= NTSC_SCAN_LINES_PER_FRAME)
   {
     scan_line = 1;
   }
@@ -204,7 +195,7 @@ ISR(TIMER1_OVF_vect)
   if (scan_line > NTSC_SCAN_LINES_PER_FIELD)
   {
     field = 2;
-    field_line = scan_line - NTSC_SCAN_LINES_PER_FIELD;
+    field_line = (scan_line - NTSC_SCAN_LINES_PER_FIELD - 1);
   }
   else
   {
@@ -213,41 +204,28 @@ ISR(TIMER1_OVF_vect)
   }
 
   is_active_video_line = field_line >= NTSC_ACTIVE_VIDEO_FIELD_LINE_START && field_line <= NTSC_ACTIVE_VIDEO_FIELD_LINE_END;
+}
 
-  if (field_line == NTSC_VSYNC_FIELD_LINE_START)
+// timer/counter 1 compare-a interrupt
+ISR(TIMER1_COMPA_vect)
+{
+  if (is_active_video_line)
   {
-    VSYNC_ACTIVE;
-  }
-  else if (field_line <= NTSC_VSYNC_FIELD_LINE_END)
-  {
-    VSYNC_INACTIVE;
-  }
+    // is there a way to do this WITHOUT delays!?
+    //_delay_us(4.7 + 4.7); // (roughly) delay hsync us + bporch us
 
-  if (is_odd_field)
-  {
-    ODD_FIELD;
-  }
-  else
-  {
-    EVEN_FIELD;
+    // pass interlacing_test(value): false to not pick out fields
+    // pass interlacing_test(value): 1 for field-1 -or- 2 for field-2
+    // depending on the value of the interlacing bool variable, you will see flickering and thinner or thicker lines
+    // and the lines will clearly move, confirming interlacing is working
+    interlacing_test(false);
   }
 }
 
 // timer/counter 1 compare-b interrupt
 ISR(TIMER1_COMPB_vect)
 {
-
-  if (is_active_video_line)
-  {
-    // is there a way to do this WITHOUT delays!?
-    _delay_us(4.7 + 4.7); // (roughly) delay hsync us + bporch us
-
-    // pass interlacing_test(value): false to not pick out fields
-    // pass interlacing_test(value): 1 for field-1 -or- 2 for field-2
-    // depending on the value of the interlacing bool variable, you will see flickering and thinner or thicker lines
-    interlacing = true;
-    interlacing_test(false);
-  }
+  LUMA_LOW;
 }
 
 void interlacing_test(uint16_t field_for_luma)
@@ -263,20 +241,18 @@ void interlacing_test(uint16_t field_for_luma)
   //  - when interlacing is true and field_for_luma is 1 or 2:
   //    - the video will flicker because we are only drawing luma during field 1 or field 2
   //    - the bars will be thiner becuase we are only drawing half the fields
+  //    - the bars will clearly move on the screen as well
   //  - when interlacing is false and field_for_luma is 1:
   //    - the video will NOT flicker because we are drawing field 1 but twice per frame
   //    - the bars will be thicker becuase we are drawing field 1 but twice per frame
 
   int box_height = 50;
-  int first_line = NTSC_ACTIVE_VIDEO_FIELD_LINE_MID - box_height;
-  int last_line = NTSC_ACTIVE_VIDEO_FIELD_LINE_MID + box_height;
+  int first_line = NTSC_ACTIVE_VIDEO_FIELD_LINE_START; // NTSC_ACTIVE_VIDEO_FIELD_LINE_MID - box_height;
+  int last_line = NTSC_ACTIVE_VIDEO_FIELD_LINE_END;    // NTSC_ACTIVE_VIDEO_FIELD_LINE_MID + box_height;
 
   if (field_line >= first_line && field_line <= last_line && field_line % 8 == 0 && (!field_for_luma || field == field_for_luma))
   {
-    _delay_us(10);
     LUMA_HIGH;
-    _delay_us(25);
-    LUMA_LOW;
     return;
   }
 }
