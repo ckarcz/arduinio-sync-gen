@@ -160,6 +160,7 @@ ISR(TIMER1_OVF_vect)
       {
         OCR1A = NTSC_VSYNC_PERIOD_TICKS;
 
+        scan_line = 1;
         is_odd_field = !is_odd_field;
       }
     }
@@ -245,7 +246,7 @@ ISR(TIMER1_COMPB_vect)
     // pass interlacing_test(value): 1 for field-1 -or- 2 for field-2
     // depending on the value of the interlacing bool variable, you will see flickering and thinner or thicker lines
     interlacing = true;
-    interlacing_test(1);
+    interlacing_test(false);
   }
 }
 
