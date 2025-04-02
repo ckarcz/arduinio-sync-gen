@@ -267,13 +267,14 @@ void interlacing_test(uint16_t field_for_luma)
   //    - the bars will be thicker becuase we are drawing field 1 but twice per frame
 
   int box_height = 50;
-  int first_line = NTSC_ACTIVE_VIDEO_FIELD_LINE_START; // NTSC_ACTIVE_VIDEO_FIELD_LINE_MID - box_height;
-  int last_line = NTSC_ACTIVE_VIDEO_FIELD_LINE_END;    // NTSC_ACTIVE_VIDEO_FIELD_LINE_MID + box_height;
+  int first_line = NTSC_ACTIVE_VIDEO_FIELD_LINE_MID - box_height;
+  int last_line = NTSC_ACTIVE_VIDEO_FIELD_LINE_MID + box_height;
 
   if (field_line >= first_line && field_line <= last_line && field_line % 8 == 0 && (!field_for_luma || field == field_for_luma))
   {
-    LUMA_HIGH;
     _delay_us(10);
+    LUMA_HIGH;
+    _delay_us(25);
     LUMA_LOW;
     return;
   }
