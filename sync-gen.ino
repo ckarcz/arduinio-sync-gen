@@ -201,7 +201,6 @@ ISR(TIMER1_COMPB_vect)
     if (scan_line == NTSC_SCAN_LINES_PER_FIELD)
     {
       OCR1A = NTSC_VSYNC_PERIOD_TICKS;
-      is_vsync_active = true;
 
       scan_line = 1;
     }
