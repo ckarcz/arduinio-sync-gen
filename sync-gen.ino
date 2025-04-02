@@ -215,10 +215,15 @@ ISR(TIMER1_COMPB_vect)
     scan_line = 1;
   }
 
-  if (scan_line > NTSC_SCAN_LINES_PER_FIELD)
+  if (scan_line == NTSC_SCAN_LINES_PER_FIELD && half_line)
   {
     field = 2;
-    field_line = (scan_line - NTSC_SCAN_LINES_PER_FIELD + 1);
+    field_line = 1;
+  }
+  else if (scan_line > NTSC_SCAN_LINES_PER_FIELD)
+  {
+    field = 2;
+    field_line = (scan_line - NTSC_SCAN_LINES_PER_FIELD);
   }
   else
   {
